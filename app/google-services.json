@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1015984974762",
+    "project_id": "jatrenamma-52fff",
+    "storage_bucket": "jatrenamma-52fff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015984974762:android:afecdbacc71b6ce06699d3",
+        "android_client_info": {
+          "package_name": "com.example.jatrenamma"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQ31IF0LXbN7l6M0FO7O6NdP3xRo5LK1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
