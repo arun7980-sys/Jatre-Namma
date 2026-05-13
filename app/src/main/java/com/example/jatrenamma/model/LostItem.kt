@@ -7,5 +7,6 @@ data class LostItem(
     val imageUrl: String = "",
     val contactNumber: String = "",
     val isResolved: Boolean = false,
+    val type: String = "Lost", // "Lost" or "Found"
     val timestamp: Long = System.currentTimeMillis()
 )

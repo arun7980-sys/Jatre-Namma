@@ -1,16 +1,22 @@
 package com.example.jatrenamma.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jatrenamma.model.Event
 import com.example.jatrenamma.model.LostItem
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class JatreViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events
@@ -18,32 +24,59 @@ class JatreViewModel : ViewModel() {
     private val _lostItems = MutableStateFlow<List<LostItem>>(emptyList())
     val lostItems: StateFlow<List<LostItem>> = _lostItems
 
+    private val _isUploading = MutableStateFlow(false)
+    val isUploading: StateFlow<Boolean> = _isUploading
+
     init {
         fetchEvents()
         fetchLostItems()
     }
 
     private fun fetchEvents() {
-        db.collection("events").addSnapshotListener { snapshot, e ->
-            if (e != null) return@addSnapshotListener
-            val eventList = snapshot?.toObjects(Event::class.java) ?: emptyList()
-            _events.value = eventList
-        }
+        db.collection("events")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) return@addSnapshotListener
+                val eventList = snapshot?.toObjects(Event::class.java) ?: emptyList()
+                _events.value = eventList
+            }
     }
 
     private fun fetchLostItems() {
-        db.collection("lost_items").addSnapshotListener { snapshot, e ->
-            if (e != null) return@addSnapshotListener
-            val itemList = snapshot?.toObjects(LostItem::class.java) ?: emptyList()
-            _lostItems.value = itemList
+        db.collection("lost_items")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) return@addSnapshotListener
+                val itemList = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(LostItem::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                _lostItems.value = itemList
+            }
+    }
+
+    fun addLostItem(item: LostItem, imageUri: Uri?) {
+        viewModelScope.launch {
+            _isUploading.value = true
+            try {
+                var finalImageUrl = ""
+                if (imageUri != null) {
+                    val fileName = "lost_found/${UUID.randomUUID()}.jpg"
+                    val ref = storage.reference.child(fileName)
+                    ref.putFile(imageUri).await()
+                    finalImageUrl = ref.downloadUrl.await().toString()
+                }
+                
+                val newItem = item.copy(imageUrl = finalImageUrl)
+                db.collection("lost_items").add(newItem)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isUploading.value = false
+            }
         }
     }
 
-    fun addLostItem(item: LostItem) {
-        db.collection("lost_items").add(item)
-    }
-
     fun resolveItem(itemId: String) {
-        db.collection("lost_items").document(itemId).update("resolved", true)
+        db.collection("lost_items").document(itemId).update("isResolved", true)
     }
 }
