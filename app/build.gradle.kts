@@ -1,6 +1,4 @@
-import org.gradle.accessors.dm.LibrariesForLibs
-
-val LibrariesForLibs.FirebaseLibraryAccessors.storage: Any
+@file:Suppress("DEPRECATION")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -16,7 +14,6 @@ android {
     defaultConfig {
         applicationId = "com.example.jatrenamma"
         minSdk = 24
-        //noinspection EditedTargetSdkVersion
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -40,6 +37,7 @@ android {
     buildFeatures {
         compose = true
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
