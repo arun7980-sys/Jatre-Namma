@@ -16,7 +16,6 @@ import java.util.UUID
 
 class JatreViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events
@@ -37,9 +36,63 @@ class JatreViewModel : ViewModel() {
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) return@addSnapshotListener
+                
+                if (snapshot != null && snapshot.isEmpty) {
+                    populateMockEventsIfEmpty()
+                }
+                
                 val eventList = snapshot?.toObjects(Event::class.java) ?: emptyList()
                 _events.value = eventList
             }
+    }
+
+    private fun populateMockEventsIfEmpty() {
+        val mockEvents = listOf(
+            Event(
+                id = UUID.randomUUID().toString(),
+                title = "Grand Rathotsava",
+                description = "The main chariot pulling ceremony.",
+                startTime = "4:00 PM",
+                date = "Oct 24",
+                location = "Main Temple Street",
+                timestamp = System.currentTimeMillis() + 100000,
+                isOngoing = true
+            ),
+            Event(
+                id = UUID.randomUUID().toString(),
+                title = "Traditional Wrestling",
+                description = "Local champions compete in the mud arena.",
+                startTime = "6:00 PM",
+                date = "Oct 24",
+                location = "Village Ground",
+                timestamp = System.currentTimeMillis() + 300000,
+                isOngoing = false
+            ),
+            Event(
+                id = UUID.randomUUID().toString(),
+                title = "Cultural Drama",
+                description = "Mythological play performed by local artists.",
+                startTime = "8:30 PM",
+                date = "Oct 24",
+                location = "Open Air Theatre",
+                timestamp = System.currentTimeMillis() + 600000,
+                isOngoing = false
+            ),
+            Event(
+                id = UUID.randomUUID().toString(),
+                title = "Cattle Fair",
+                description = "Annual exhibition of finest cattle breeds.",
+                startTime = "9:00 AM",
+                date = "Oct 25",
+                location = "Exhibition Ground",
+                timestamp = System.currentTimeMillis() + 86400000,
+                isOngoing = false
+            )
+        )
+
+        mockEvents.forEach { event ->
+            db.collection("events").document(event.id).set(event)
+        }
     }
 
     private fun fetchLostItems() {
@@ -58,13 +111,9 @@ class JatreViewModel : ViewModel() {
         viewModelScope.launch {
             _isUploading.value = true
             try {
-                var finalImageUrl = ""
-                if (imageUri != null) {
-                    val fileName = "lost_found/${UUID.randomUUID()}.jpg"
-                    val ref = storage.reference.child(fileName)
-                    ref.putFile(imageUri).await()
-                    finalImageUrl = ref.downloadUrl.await().toString()
-                }
+                // Bypass Firebase Storage to avoid "Upgrade to Blaze" billing issues.
+                // Store the local device URI directly in Firestore instead.
+                val finalImageUrl = imageUri?.toString() ?: ""
                 
                 val newItem = item.copy(imageUrl = finalImageUrl)
                 db.collection("lost_items").add(newItem)
